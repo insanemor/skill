@@ -1,0 +1,8 @@
+# Backlog gerado localmente pela skill processo-agil
+Epicos/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
