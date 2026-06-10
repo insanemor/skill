@@ -1,0 +1,18 @@
+{
+  "name": "insanemor-skill",
+  "version": "1.0.0",
+  "description": "Cursor Agent Skills de insanemor",
+  "repository": "https://github.com/insanemor/skill",
+  "skills": [
+    {
+      "name": "processo-agil",
+      "path": "skills/processo-agil",
+      "description": "Backlog ágil em arquivos Markdown (épicos, features, stories, tasks, bugs)"
+    },
+    {
+      "name": "sem-gambiarra",
+      "path": "skills/sem-gambiarra",
+      "description": "Implementação sem workarounds — exige causa raiz e padrões do projeto"
+    }
+  ]
+}

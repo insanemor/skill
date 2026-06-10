@@ -4,9 +4,59 @@ Repositório pessoal de **Cursor Agent Skills** — instruções especializadas 
 
 Cada skill fica em `.cursor/skills/<nome-da-skill>/` com um `SKILL.md` e arquivos de apoio (templates, referência, scripts).
 
+## Instalação via Node
+
+Requer **Node.js 18+** no PATH.
+
+### Opção 1 — CLI deste pacote (recomendado)
+
+```bash
+# Direto do GitHub (funciona antes de publicar no npm)
+npx github:insanemor/skill --list
+npx github:insanemor/skill -y
+
+# Depois de publicar no npm (@insanemor/skill)
+npx @insanemor/skill --list
+
+# Instalar todas no projeto atual (.cursor/skills/)
+npx @insanemor/skill -y
+
+# Instalar uma skill específica
+npx @insanemor/skill -s processo-agil -y
+npx @insanemor/skill -s sem-gambiarra -y
+
+# Instalar globalmente (qualquer projeto: ~/.cursor/skills/)
+npx @insanemor/skill -g -y
+```
+
+> Após instalar, reabra o Cursor ou recarregue a janela. As skills aparecem em **Settings → Rules → Agent Decides**.
+
+### Opção 2 — Ecossistema aberto (`skills` CLI)
+
+```bash
+# Listar skills no repositório GitHub
+npx skills add insanemor/skill --list
+
+# Instalar no Cursor (projeto atual)
+npx skills add insanemor/skill --skill processo-agil -a cursor -y
+npx skills add insanemor/skill --skill sem-gambiarra -a cursor -y
+
+# Instalar todas
+npx skills add insanemor/skill --skill '*' -a cursor -y
+
+# Global
+npx skills add insanemor/skill --skill '*' -a cursor -g -y
+```
+
+### Opção 3 — Manual
+
+Clone o repositório e copie `.cursor/skills/<nome>/` para `.cursor/skills/` do seu projeto.
+
+---
+
 ## Como usar
 
-1. Abra este repositório no Cursor **ou** copie a pasta da skill para `.cursor/skills/` do seu projeto.
+1. Instale as skills (comandos acima) **ou** abra este repositório no Cursor.
 2. No chat, use os comandos (tags) da skill — o agente detecta pelo contexto ou você pode citar explicitamente: *"use a skill processo-agil"* ou *"use a skill sem-gambiarra"*.
 
 ---
@@ -65,9 +115,25 @@ Skills planejadas para este repositório (ainda não implementadas):
 
 ---
 
+## Publicar no npm (mantenedores)
+
+Ao alterar skills em `.cursor/skills/`, sincronize antes de publicar:
+
+```bash
+npm run sync          # copia .cursor/skills/ → skills/
+npm publish --access public
+```
+
+---
+
 ## Estrutura do repositório
 
 ```
+.cursor/skills/          ← fonte (desenvolvimento neste repo)
+skills/                  ← cópia para distribuição (npx / npm pack)
+bin/install.js           ← CLI insanemor-skills
+package.json
+skills.json
 .cursor/skills/
 ├── processo-agil/
 │   ├── SKILL.md
@@ -79,5 +145,5 @@ Skills planejadas para este repositório (ainda não implementadas):
 │       └── next_id.py
 └── sem-gambiarra/
     └── SKILL.md
-Epicos/          ← backlog gerado pela skill processo-agil (quando em uso)
+Epicos/                  ← backlog gerado pela skill processo-agil (quando em uso)
 ```
