@@ -1,39 +1,18 @@
 {
-  "name": "@insanemor/skill",
+  "name": "@multitech/xp-skill",
   "version": "1.0.0",
-  "description": "Cursor Agent Skills — processo-agil (backlog ágil) e sem-gambiarra (sem workarounds)",
-  "license": "MIT",
-  "author": "insanemor",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/insanemor/skill.git"
-  },
-  "homepage": "https://github.com/insanemor/skill#readme",
-  "bugs": {
-    "url": "https://github.com/insanemor/skill/issues"
-  },
-  "keywords": [
-    "cursor",
-    "agent-skills",
-    "cursor-skills",
-    "skills",
-    "ai",
-    "processo-agil",
-    "sem-gambiarra"
-  ],
-  "type": "commonjs",
-  "engines": {
-    "node": ">=18"
-  },
+  "description": "Instala metodologia XP (pair programming + TDD) via Claude Code no seu projeto",
   "bin": {
-    "insanemor-skills": "./bin/install.js"
+    "multitech-xp": "./bin/install.js"
   },
   "files": [
     "bin",
-    "skills"
+    "templates"
   ],
   "scripts": {
-    "sync": "node scripts/sync-skills.js",
-    "prepack": "node scripts/sync-skills.js"
-  }
+    "test": "node bin/install.js"
+  },
+  "keywords": ["claude-code", "xp", "tdd", "pair-programming", "agile"],
+  "author": "Multitech",
+  "license": "MIT"
 }

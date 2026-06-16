@@ -1,165 +1,136 @@
 #!/usr/bin/env node
-/**
- * Instala skills deste pacote em .cursor/skills/ (projeto) ou ~/.cursor/skills/ (global).
- *
- * Uso:
- *   npx @insanemor/skill
- *   npx @insanemor/skill -s processo-agil -y
- *   npx @insanemor/skill -g -y
- *   npx @insanemor/skill --list
- */
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
 
-const PKG_ROOT = path.join(__dirname, "..");
-const SKILLS_SRC = path.join(PKG_ROOT, "skills");
+const fs = require('fs');
+const path = require('path');
 
-const HELP = `
-insanemor-skills — instala Cursor Agent Skills de @insanemor/skill
+const TARGET_DIR = process.cwd();
+const TEMPLATES_DIR = path.join(__dirname, '..', 'templates');
 
-Uso:
-  npx @insanemor/skill [opções]
+const CYAN = '\x1b[36m';
+const GREEN = '\x1b[32m';
+const YELLOW = '\x1b[33m';
+const RED = '\x1b[31m';
+const RESET = '\x1b[0m';
+const BOLD = '\x1b[1m';
 
-Opções:
-  -s, --skill <nome>   Skill específica (repita para várias). Omita para instalar todas.
-  -g, --global         Instala em ~/.cursor/skills/ (todos os projetos)
-  -l, --list           Lista skills disponíveis neste pacote
-  -y, --yes            Sem confirmação
-  -h, --help           Mostra esta ajuda
-
-Alternativa (ecossistema aberto):
-  npx skills add insanemor/skill -a cursor -y
-  npx skills add insanemor/skill --list
-`.trim();
-
-function parseArgs(argv) {
-  const opts = {
-    global: false,
-    list: false,
-    yes: false,
-    help: false,
-    skills: [],
-  };
-
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "-h" || arg === "--help") {
-      opts.help = true;
-    } else if (arg === "-g" || arg === "--global") {
-      opts.global = true;
-    } else if (arg === "-l" || arg === "--list") {
-      opts.list = true;
-    } else if (arg === "-y" || arg === "--yes") {
-      opts.yes = true;
-    } else if (arg === "-s" || arg === "--skill") {
-      const next = argv[++i];
-      if (!next || next.startsWith("-")) {
-        console.error("Erro: -s/--skill requer um nome.");
-        process.exit(1);
-      }
-      opts.skills.push(next);
-    } else if (!arg.startsWith("-")) {
-      opts.skills.push(arg);
-    }
-  }
-
-  return opts;
+function log(color, icon, msg) {
+  console.log(`${color}${icon}${RESET} ${msg}`);
 }
 
-function listAvailableSkills() {
-  if (!fs.existsSync(SKILLS_SRC)) {
-    console.error("Pasta skills/ não encontrada no pacote:", SKILLS_SRC);
-    process.exit(1);
-  }
-  return fs
-    .readdirSync(SKILLS_SRC, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && fs.existsSync(path.join(SKILLS_SRC, e.name, "SKILL.md")))
-    .map((e) => e.name)
-    .sort();
+function copyFile(src, dest) {
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(src, dest);
 }
 
-function copyRecursive(from, to) {
-  fs.mkdirSync(to, { recursive: true });
-  for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
-    const srcPath = path.join(from, entry.name);
-    const destPath = path.join(to, entry.name);
+function copyDir(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
     if (entry.isDirectory()) {
-      copyRecursive(srcPath, destPath);
+      copyDir(srcPath, destPath);
     } else {
-      fs.copyFileSync(srcPath, destPath);
+      copyFile(srcPath, destPath);
     }
   }
 }
 
-function installSkill(name, destRoot) {
-  const src = path.join(SKILLS_SRC, name);
-  const dest = path.join(destRoot, name);
+function installSkills() {
+  const skillsSrc = path.join(TEMPLATES_DIR, 'skills');
+  const skillsDest = path.join(TARGET_DIR, '.claude', 'skills');
 
-  if (!fs.existsSync(path.join(src, "SKILL.md"))) {
-    console.error(`Skill não encontrada: ${name}`);
-    process.exit(1);
+  const skillDirs = fs.readdirSync(skillsSrc, { withFileTypes: true });
+  for (const entry of skillDirs) {
+    if (!entry.isDirectory()) continue;
+    const skillName = entry.name;
+    const src = path.join(skillsSrc, skillName);
+    const dest = path.join(skillsDest, skillName);
+    const exists = fs.existsSync(path.join(dest, 'SKILL.md'));
+    // Copia a pasta inteira da skill (SKILL.md + arquivos de apoio, ex: reference.md, templates/).
+    copyDir(src, dest);
+    log(GREEN, exists ? '↺' : '✓', `${exists ? 'Atualizado' : 'Instalado'}: .claude/skills/${skillName}/`);
   }
+}
+
+function installClaudeMd() {
+  const src = path.join(TEMPLATES_DIR, 'CLAUDE.md');
+  const dest = path.join(TARGET_DIR, 'CLAUDE.md');
 
   if (fs.existsSync(dest)) {
-    fs.rmSync(dest, { recursive: true, force: true });
-  }
+    const existing = fs.readFileSync(dest, 'utf8');
+    const marker = '<!-- multitech-xp -->';
 
-  copyRecursive(src, dest);
-  return dest;
+    if (existing.includes(marker)) {
+      log(YELLOW, '↺', 'CLAUDE.md já contém as regras XP — pulando (use --force para sobrescrever)');
+      return;
+    }
+
+    const xpBlock = fs.readFileSync(src, 'utf8');
+    fs.appendFileSync(dest, '\n\n' + xpBlock);
+    log(GREEN, '✓', 'Regras XP adicionadas ao CLAUDE.md existente');
+  } else {
+    copyFile(src, dest);
+    log(GREEN, '✓', 'CLAUDE.md criado com regras XP');
+  }
 }
 
 function main() {
-  const opts = parseArgs(process.argv.slice(2));
+  const force = process.argv.includes('--force');
 
-  if (opts.help) {
-    console.log(HELP);
-    return;
-  }
+  console.log('');
+  console.log(`${BOLD}${CYAN}⚡ Multitech XP Skill${RESET}`);
+  console.log(`${CYAN}Instalando metodologia XP + TDD no projeto...${RESET}`);
+  console.log('');
 
-  const available = listAvailableSkills();
-
-  if (opts.list) {
-    console.log("Skills disponíveis:");
-    for (const name of available) {
-      console.log(`  - ${name}`);
+  try {
+    if (force) {
+      const dest = path.join(TARGET_DIR, 'CLAUDE.md');
+      if (fs.existsSync(dest)) {
+        const src = path.join(TEMPLATES_DIR, 'CLAUDE.md');
+        copyFile(src, dest);
+        log(GREEN, '✓', 'CLAUDE.md sobrescrito (--force)');
+      }
+    } else {
+      installClaudeMd();
     }
-    return;
+
+    installSkills();
+
+    console.log('');
+    log(GREEN, '✓', `${BOLD}Pronto! Skills disponíveis no projeto:${RESET}`);
+    console.log('');
+    console.log(`  ${BOLD}Fundação${RESET}`);
+    console.log(`  ${CYAN}/xp-init${RESET}       → Define a visão de negócio → .xp/projeto.md`);
+    console.log(`  ${CYAN}/xp-arch${RESET}       → Define as camadas técnicas → .xp/arquitetura.md`);
+    console.log(`  ${CYAN}/xp-front${RESET}      → Padrões de frontend (opcional) → .xp/frontend.md`);
+    console.log('');
+    console.log(`  ${BOLD}Planejamento${RESET}`);
+    console.log(`  ${CYAN}/xp-plan${RESET}       → Planning Game: histórias por camada → .xp/xp-backlog.md`);
+    console.log(`  ${CYAN}/xp-standards${RESET}  → Configura lint, commits, hooks e PR template`);
+    console.log(`  ${CYAN}/xp-deploy${RESET}     → Configura build, variáveis e CI/CD`);
+    console.log('');
+    console.log(`  ${BOLD}Desenvolvimento${RESET}`);
+    console.log(`  ${CYAN}/xp-task${RESET}       → Pega a próxima tarefa e aciona o ciclo TDD`);
+    console.log(`  ${CYAN}/xp-tdd${RESET}        → Ciclo TDD: red → green → refactor`);
+    console.log(`  ${CYAN}/xp-help${RESET}       → Investiga e corrige bugs com TDD`);
+    console.log(`  ${CYAN}/xp-feature${RESET}    → Avalia e registra uma nova feature`);
+    console.log('');
+    console.log(`  ${BOLD}Decisões e contrato${RESET}`);
+    console.log(`  ${CYAN}/xp-adr${RESET}        → Registra decisão arquitetural → .xp/decisions/`);
+    console.log(`  ${CYAN}/xp-ctr${RESET}        → Gerencia regras do projeto → .xp/contract.md`);
+    console.log('');
+    console.log(`  ${BOLD}Qualidade e entrega${RESET}`);
+    console.log(`  ${CYAN}/xp-quality${RESET}    → Audita 7 pilares de qualidade`);
+    console.log(`  ${CYAN}/xp-test${RESET}       → Testes dinâmicos: smoke, e2e, performance, security`);
+    console.log(`  ${CYAN}/xp-docs${RESET}       → Cria ou atualiza documentação do projeto`);
+    console.log('');
+    console.log(`${YELLOW}Fluxo sugerido para projeto novo:${RESET}`);
+    console.log(`  ${CYAN}/xp-init${RESET} → ${CYAN}/xp-arch${RESET} → ${CYAN}/xp-adr${RESET} → ${CYAN}/xp-plan${RESET} → ${CYAN}/xp-task${RESET}`);
+    console.log('');
+  } catch (err) {
+    log(RED, '✗', `Erro durante instalação: ${err.message}`);
+    process.exit(1);
   }
-
-  const selected =
-    opts.skills.length > 0
-      ? opts.skills.filter((s) => s !== "*")
-      : available;
-
-  for (const name of selected) {
-    if (!available.includes(name)) {
-      console.error(`Skill desconhecida: ${name}`);
-      console.error(`Disponíveis: ${available.join(", ")}`);
-      process.exit(1);
-    }
-  }
-
-  const destRoot = opts.global
-    ? path.join(os.homedir(), ".cursor", "skills")
-    : path.join(process.cwd(), ".cursor", "skills");
-
-  const scope = opts.global ? "global (~/.cursor/skills/)" : "projeto (.cursor/skills/)";
-
-  if (!opts.yes) {
-    console.log(`Instalar ${selected.join(", ")} em ${scope}?`);
-    console.log("Destino:", destRoot);
-    console.log("Use -y para pular esta mensagem.");
-  }
-
-  fs.mkdirSync(destRoot, { recursive: true });
-
-  for (const name of selected) {
-    const dest = installSkill(name, destRoot);
-    console.log(`✓ ${name} → ${dest}`);
-  }
-
-  console.log("\nReabra o Cursor ou recarregue a janela para detectar as skills.");
 }
 
 main();

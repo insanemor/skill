@@ -1,8 +1,9 @@
-# Backlog gerado localmente pela skill processo-agil
-Epicos/
+# Dependências
+node_modules/
 
-# OS / editor
+# Artefato de empacotamento (gerado, não versionar)
+skill.zip
+
+# Logs e temporários
+*.log
 .DS_Store
-Thumbs.db
-*.swp
-*~
